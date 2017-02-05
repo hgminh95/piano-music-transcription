@@ -13,7 +13,7 @@ _logger = logging.getLogger(__name__)
 
 
 def do_transcribe(args):
-    for name, transcribers in MetaTranscriber.method_to_transcriber.iteritems():
+    for name, transcriber in MetaTranscriber.method_to_transcriber.iteritems():
         if name == args.method:
             _logger.info(name)
 
@@ -24,14 +24,18 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(help='commands')
 
     # Parser for transcribe command
-    transcribe_parser = subparsers.add_parser('transcribe',
+    transcribe_parser = subparsers.add_parser(
+        'transcribe',
         help='Transcribe audio music to midi file')
-    transcribe_parser.add_argument('-m', '--method',
+    transcribe_parser.add_argument(
+        '-m', '--method',
         help='method used to transcribe music',
         default='dummy')
-    transcribe_parser.add_argument('-i', '--input',
+    transcribe_parser.add_argument(
+        '-i', '--input',
         help='input file or folder')
-    transcribe_parser.add_argument('-o', '--output',
+    transcribe_parser.add_argument(
+        '-o', '--output',
         help='output file or folder')
     transcribe_parser.set_defaults(sub='transcribe')
 
