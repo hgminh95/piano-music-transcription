@@ -1,5 +1,7 @@
 import argparse
 
+import transcribers
+
 
 if __name__ == '__main__':
 
