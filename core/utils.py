@@ -8,16 +8,24 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
-def wav_walk(path, recursive=True, wavonly=False):
+def wav_walk(path, recursive=True):
     for root, dirs, files in os.walk(path):
         for wav_name in fnmatch.filter(files, '*.wav'):
-            mid_name = wav_name[:-4] + '.mid'
-
-            mid_full = os.path.join(root, mid_name)
             wav_full = os.path.join(root, wav_name)
 
-            if wavonly:
-                yield wav_full
-            else:
-                if os.path.exists(mid_full):
-                    yield (wav_full, mid_full)
+            yield wav_full[:-4]
+
+
+def read_txt(path):
+    index = 0
+    res = []
+    print path
+    with open(path) as f:
+        for line in f:
+            if index != 0:
+                data = line.rstrip().split('\t')
+                res.append((float(data[0]), float(data[1]), int(data[2])))
+
+            index += 1
+
+    return res
