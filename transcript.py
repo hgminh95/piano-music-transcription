@@ -13,17 +13,21 @@ logging.basicConfig(level=logging.DEBUG,
 _logger = logging.getLogger(__name__)
 
 
-def do_transcribe(args):
+def transcriber_do(action, args):
     # Load input file
-    total_files = 0
+    files = []
     for elem in utils.wav_walk(args.input):
-        total_files += 1
+        files.append(elem)
         _logger.debug('Found wav file: {0}'.format(elem))
-    _logger.info('Found {0} sample(s)'.format(total_files))
+    _logger.info('Found {0} sample(s)'.format(len(files)))
 
-    for name, transcriber in MetaTranscriber.method_to_transcriber.iteritems():
-        if name == args.method:
-            _logger.info(name)
+    transcriber = MetaTranscriber.method_to_transcriber[args.method]
+
+    for file in files:
+        if action == 'transcribe':
+            transcriber.transcribe(file)
+        elif action == 'construct':
+            transcriber.construct(file)
 
 
 if __name__ == '__main__':
@@ -38,7 +42,7 @@ if __name__ == '__main__':
     transcribe_parser.add_argument(
         '-m', '--method',
         help='method used to transcribe music',
-        default='dummy')
+        default='librosa_onset')
     transcribe_parser.add_argument(
         '-i', '--input',
         help='input file or folder',
@@ -48,9 +52,27 @@ if __name__ == '__main__':
         help='output file or folder')
     transcribe_parser.set_defaults(sub='transcribe')
 
+    construct_parser = subparsers.add_parser(
+        'construct',
+        help='Construct data for training')
+    construct_parser.add_argument(
+        '-m', '--method',
+        help='method used to construct data',
+        default='librosa_onset')
+    construct_parser.add_argument(
+        '-i', '--input',
+        help='input file or folder',
+        default='.')
+    construct_parser.add_argument(
+        '-o', '--output',
+        help='output file or folder')
+    construct_parser.set_defaults(sub='construct')
+
     args = parser.parse_args()
 
     if args.sub == 'transcribe':
-        do_transcribe(args)
+        transcriber_do('transcribe', args)
+    elif args.sub == 'construct':
+        transcriber_do('construct', args)
     else:
         pass

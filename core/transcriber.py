@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from collections import defaultdict
-
 
 class MetaTranscriber(type):
 
-    method_to_transcriber = defaultdict(list)
+    method_to_transcriber = {}
 
     def __init__(self, name, bases, attrs):
         if self._name is not None:
-            self.method_to_transcriber[self._name].append(self)
+            self.method_to_transcriber[self._name] = self
 
     def __new__(meta, name, bases, attrs):
         return type.__new__(meta, name, bases, attrs)
@@ -22,5 +20,13 @@ class Transcriber(object):
     _description = None
 
     @classmethod
-    def transcribe(cls, audio):
+    def transcribe(cls, filename):
+        pass
+
+    @classmethod
+    def construct(cls, filename):
+        pass
+
+    @classmethod
+    def load(cls, filename):
         pass
