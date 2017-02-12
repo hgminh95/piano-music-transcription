@@ -47,16 +47,21 @@ class LibrosaOnsetDectector(transcriber.Transcriber):
         # plt.show()
 
     @classmethod
-    def construct(cls, filename):
+    def construct(cls, filename, output):
         expect = read_txt(filename + '.txt')
 
         y, sr = librosa.load(filename + '.wav')
+        D = librosa.core.cqt(y, sr=sr, hop_length=512, n_bins=252, bins_per_octave=36, real=False)
+        D = np.abs(D)
+        print D.shape
 
         o_env = librosa.onset.onset_strength(y, sr=sr)
         onset_frames = librosa.onset.onset_detect(onset_envelope=o_env, sr=sr)
+        onset_frames = onset_frames.reshape(-1, 1)
 
         ans = librosa.frames_to_time(onset_frames, sr=sr)
-        ans = map(lambda x: (x, 0, 0), ans)
+        ans = ans.reshape(-1, 1)
+        ans = np.hstack((ans, onset_frames))
 
-        for sample in algo.leftjoin(ans, expect):
-            print sample
+        for time, frame, notes in algo.leftjoin(ans, expect):
+            output.write("{0}, {1}, {2}\n".format(time, int(frame), notes))

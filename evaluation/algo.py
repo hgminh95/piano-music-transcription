@@ -24,9 +24,9 @@ def leftjoin(ans, expect, window=0.05):
         if abs(ans[i][0] - expect[j][0]) <= window:
             notes.append(expect[j][2])
             j = incif(j, expect_len)
-        elif ans[i] > expect[j]:
+        elif ans[i][0] > expect[j][0]:
             j = incif(j, expect_len)
         else:
-            yield ans[i][0], notes
+            yield ans[i][0], ans[i][1], notes
             i = incif(i, ans_len)
             notes = []

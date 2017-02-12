@@ -23,11 +23,15 @@ def transcriber_do(action, args):
 
     transcriber = MetaTranscriber.method_to_transcriber[args.method]
 
+    output = open(args.output, 'w')
+
     for file in files:
         if action == 'transcribe':
             transcriber.transcribe(file)
         elif action == 'construct':
-            transcriber.construct(file)
+            transcriber.construct(file, output)
+
+    output.close()
 
 
 if __name__ == '__main__':
@@ -65,7 +69,8 @@ if __name__ == '__main__':
         default='.')
     construct_parser.add_argument(
         '-o', '--output',
-        help='output file or folder')
+        help='output file or folder',
+        default='a.out')
     construct_parser.set_defaults(sub='construct')
 
     args = parser.parse_args()

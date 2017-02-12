@@ -24,7 +24,7 @@ class Transcriber(object):
         pass
 
     @classmethod
-    def construct(cls, filename):
+    def construct(cls, filename, output):
         pass
 
     @classmethod
