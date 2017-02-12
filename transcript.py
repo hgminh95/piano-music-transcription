@@ -14,14 +14,18 @@ _logger = logging.getLogger(__name__)
 
 
 def transcriber_do(action, args):
+    transcriber = MetaTranscriber.method_to_transcriber[args.method]
+
+    if action == 'train':
+        transcriber.train(args.input)
+        return
+
     # Load input file
     files = []
     for elem in utils.wav_walk(args.input):
         files.append(elem)
         _logger.debug('Found wav file: {0}'.format(elem))
     _logger.info('Found {0} sample(s)'.format(len(files)))
-
-    transcriber = MetaTranscriber.method_to_transcriber[args.method]
 
     output = open(args.output, 'w')
 
@@ -73,11 +77,25 @@ if __name__ == '__main__':
         default='a.out')
     construct_parser.set_defaults(sub='construct')
 
+    train_parser = subparsers.add_parser(
+        'train',
+        help='Train model')
+    train_parser.add_argument(
+        '-m', '--method',
+        help='method used to train',
+        default='librosa_onset')
+    train_parser.add_argument(
+        '-i', '--input',
+        help='input file',
+        default='.')
+    train_parser.set_defaults(sub='train')
+
     args = parser.parse_args()
 
     if args.sub == 'transcribe':
         transcriber_do('transcribe', args)
     elif args.sub == 'construct':
         transcriber_do('construct', args)
-    else:
+    elif args.sub == 'train':
+        transcriber_do('train', args)
         pass

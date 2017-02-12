@@ -2,12 +2,24 @@
 
 import librosa
 import numpy as np
-import matplotlib.pyplot as plt
 import mir_eval
+import logging
+
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import average_precision_score
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.svm import LinearSVC
 
 from core import transcriber
 from core.utils import read_txt
 import evaluation.algo as algo
+
+_logger = logging.getLogger(__name__)
 
 
 class LibrosaOnsetDectector(transcriber.Transcriber):
@@ -34,7 +46,8 @@ class LibrosaOnsetDectector(transcriber.Transcriber):
         expect = read_txt(filename + '.txt')
 
         y, sr = librosa.load(filename + '.wav')
-        D = librosa.core.cqt(y, sr=sr, hop_length=512, n_bins=252, bins_per_octave=36, real=False)
+        # D = librosa.core.cqt(y, sr=sr, hop_length=512, n_bins=252, bins_per_octave=36, real=False)
+        D = librosa.core.stft(y)
         D = np.abs(D)
         print D.shape
 
@@ -57,3 +70,59 @@ class LibrosaOnsetDectector(transcriber.Transcriber):
             else:
                 output.write(' '.join(map(str, notes)))
             output.write('\n')
+
+    @classmethod
+    def train(cls, filename):
+        piano_range = xrange(9, 96)
+        X = []
+        Y = []
+
+        _logger.info('Loading train data from file')
+        cnt = 0
+        with open(filename) as f:
+            while True:
+                line = f.readline()
+                if line is None or line == '':
+                    break
+                line = f.readline()
+                feature = map(float, line.rstrip().split(' '))
+                line = f.readline()
+                notes = map(int, line.rstrip().split(' '))
+
+                # Convert to sklearn format
+                X.append(feature)
+
+                classes = [0] * 88
+                for note in notes:
+                    if note in piano_range:
+                        classes[note - 9] = 1
+
+                Y.append(classes)
+
+                cnt += 1
+
+        _logger.info('Load {0} samples'.format(cnt))
+
+        X = np.array(X).reshape(-1, 252)
+        Y = np.array(Y, dtype=int).reshape(-1, 88)
+
+        mlb = MultiLabelBinarizer()
+        Y = mlb.fit_transform(Y)
+
+        X = X - X.mean(axis=0, keepdims=True)
+        X = X / X.std(axis=0)
+
+        _logger.info('Split into train and test set')
+        X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=.3)
+
+        _logger.info('Training...')
+        classifier = OneVsRestClassifier(LinearSVC())
+        classifier.fit(X_train, y_train)
+
+        print classifier.score(X_test, y_test)
+        y_predict = classifier.predict(X_test).astype(int)
+
+        print np.count_nonzero(y_test)
+        print np.unique(y_test, return_counts=True)
+        print np.unique(y_predict, return_counts=True)
+        print np.unique(y_test - y_predict, return_counts=True)

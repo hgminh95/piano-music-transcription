@@ -30,3 +30,7 @@ class Transcriber(object):
     @classmethod
     def load(cls, filename):
         pass
+
+    @classmethod
+    def train(cls, filename):
+        pass
