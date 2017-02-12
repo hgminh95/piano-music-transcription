@@ -29,23 +29,6 @@ class LibrosaOnsetDectector(transcriber.Transcriber):
 
         print mir_eval.onset.f_measure(np.array(expect), np.array(ans))
 
-        # D = np.abs(librosa.stft(y)) ** 2
-        # plt.figure()
-        # plt.subplot(2, 1, 1)
-        # librosa.display.specshow(librosa.logamplitude(D, ref_power=np.max),
-        #                          x_axis='time', y_axis='log')
-        # plt.title('Power spectrogram')
-        # plt.subplot(2, 1, 2)
-        # plt.plot(o_env, label='Onset strength')
-        # plt.vlines(onset_frames, 0, o_env.max(), color='r', alpha=0.9,
-        #            linestyle='--', label='Onset')
-
-        # plt.xticks([])
-        # plt.axis('tight')
-        # plt.legend(frameon=True, framealpha=0.75)
-
-        # plt.show()
-
     @classmethod
     def construct(cls, filename, output):
         expect = read_txt(filename + '.txt')
@@ -64,4 +47,13 @@ class LibrosaOnsetDectector(transcriber.Transcriber):
         ans = np.hstack((ans, onset_frames))
 
         for time, frame, notes in algo.leftjoin(ans, expect):
-            output.write("{0}, {1}, {2}\n".format(time, int(frame), notes))
+            frame = int(frame)
+            output.write("{0} {1}".format(time, frame))
+            output.write('\n')
+            output.write(' '.join(map(str, D[:, frame])))
+            output.write('\n')
+            if len(notes) == 0:
+                output.write('-1')
+            else:
+                output.write(' '.join(map(str, notes)))
+            output.write('\n')

@@ -1,3 +1,4 @@
 *.pyc
 samples/
 *.out
+*.data
