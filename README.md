@@ -8,6 +8,8 @@ Automatic music transcription for piano
 - Tensorflow
 - librosa
 - music21
+- mir_eval
+- sklearn
 
 ## Documentations
 
