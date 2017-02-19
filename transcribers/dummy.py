@@ -14,6 +14,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.svm import LinearSVC
+from sklearn.externals import joblib
 
 from core import transcriber
 from core.utils import read_txt
@@ -72,13 +73,14 @@ class LibrosaOnsetDectector(transcriber.Transcriber):
             output.write('\n')
 
     @classmethod
-    def train(cls, filename):
+    def train(cls, filename, output):
         piano_range = xrange(9, 96)
         X = []
         Y = []
 
         _logger.info('Loading train data from file')
-        cnt = 0
+        n_samples = 0
+        n_features = 0
         with open(filename) as f:
             while True:
                 line = f.readline()
@@ -86,6 +88,7 @@ class LibrosaOnsetDectector(transcriber.Transcriber):
                     break
                 line = f.readline()
                 feature = map(float, line.rstrip().split(' '))
+                n_features = len(feature)
                 line = f.readline()
                 notes = map(int, line.rstrip().split(' '))
 
@@ -99,11 +102,11 @@ class LibrosaOnsetDectector(transcriber.Transcriber):
 
                 Y.append(classes)
 
-                cnt += 1
+                n_samples += 1
 
-        _logger.info('Load {0} samples'.format(cnt))
+        _logger.info('Load {0} samples'.format(n_samples))
 
-        X = np.array(X).reshape(-1, 252)
+        X = np.array(X).reshape(-1, n_features)
         Y = np.array(Y, dtype=int).reshape(-1, 88)
 
         mlb = MultiLabelBinarizer()
@@ -119,10 +122,12 @@ class LibrosaOnsetDectector(transcriber.Transcriber):
         classifier = OneVsRestClassifier(LinearSVC())
         classifier.fit(X_train, y_train)
 
-        print classifier.score(X_test, y_test)
         y_predict = classifier.predict(X_test).astype(int)
 
         print np.count_nonzero(y_test)
         print np.unique(y_test, return_counts=True)
         print np.unique(y_predict, return_counts=True)
         print np.unique(y_test - y_predict, return_counts=True)
+
+        _logger.info("Save to file {0}".format(output))
+        joblib.dump(classifier, output)

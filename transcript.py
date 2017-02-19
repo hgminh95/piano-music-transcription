@@ -17,7 +17,7 @@ def transcriber_do(action, args):
     transcriber = MetaTranscriber.method_to_transcriber[args.method]
 
     if action == 'train':
-        transcriber.train(args.input)
+        transcriber.train(args.input, args.output)
         return
 
     # Load input file
@@ -88,6 +88,10 @@ if __name__ == '__main__':
         '-i', '--input',
         help='input file',
         default='.')
+    train_parser.add_argument(
+        '-o', '--output',
+        help='output model file',
+        default='a.out')
     train_parser.set_defaults(sub='train')
 
     args = parser.parse_args()
