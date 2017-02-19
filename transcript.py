@@ -27,15 +27,20 @@ def transcriber_do(action, args):
         _logger.debug('Found wav file: {0}'.format(elem))
     _logger.info('Found {0} sample(s)'.format(len(files)))
 
-    output = open(args.output, 'w')
+    output = None
+    if 'output' in args:
+        output = open(args.output, 'w')
 
     for file in files:
         if action == 'transcribe':
             transcriber.transcribe(file)
         elif action == 'construct':
             transcriber.construct(file, output)
+        elif action == 'eval':
+            transcriber.eval(file, args.model)
 
-    output.close()
+    if output is not None:
+        output.close()
 
 
 if __name__ == '__main__':
@@ -94,6 +99,22 @@ if __name__ == '__main__':
         default='a.out')
     train_parser.set_defaults(sub='train')
 
+    eval_parser = subparsers.add_parser(
+        'eval',
+        help='Evaluate model')
+    eval_parser.add_argument(
+        '-m', '--method',
+        help='method used to evaluate',
+        default='librosa_onset')
+    eval_parser.add_argument(
+        '--model',
+        help='model file to be loaded')
+    eval_parser.add_argument(
+        '-i', '--input',
+        help='input folder',
+        default='.')
+    eval_parser.set_defaults(sub='eval')
+
     args = parser.parse_args()
 
     if args.sub == 'transcribe':
@@ -102,4 +123,5 @@ if __name__ == '__main__':
         transcriber_do('construct', args)
     elif args.sub == 'train':
         transcriber_do('train', args)
-        pass
+    elif args.sub == 'eval':
+        transcriber_do('eval', args)

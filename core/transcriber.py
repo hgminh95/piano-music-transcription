@@ -20,15 +20,15 @@ class Transcriber(object):
     _description = None
 
     @classmethod
-    def transcribe(cls, filename):
-        pass
-
-    @classmethod
     def construct(cls, filename, output):
         pass
 
     @classmethod
-    def load(cls, filename):
+    def transcribe(cls, filename):
+        pass
+
+    @classmethod
+    def eval(cls, filename, model):
         pass
 
     @classmethod

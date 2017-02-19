@@ -19,7 +19,6 @@ def wav_walk(path, recursive=True):
 def read_txt(path):
     index = 0
     res = []
-    print path
     with open(path) as f:
         for line in f:
             if index != 0:
