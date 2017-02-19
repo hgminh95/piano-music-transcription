@@ -35,8 +35,13 @@ class LibrosaOnsetDetector(transcriber.Transcriber):
         y, sr = librosa.load(filename + '.wav')
 
         o_env = librosa.onset.onset_strength(y, sr=sr)
-        onset_frames = librosa.onset.onset_detect(onset_envelope=o_env, sr=sr)
+        onset_frames = librosa.onset.onset_detect(
+            onset_envelope=o_env, sr=sr,
+            pre_max=0.03 * sr // 512, post_max=0.00 * sr // 512 + 1,
+            pre_avg=0.10 * sr // 512, post_avg=0.10 * sr // 512 + 1,
+            delta=0.01, wait=0.02 * sr // 512)
 
+        _logger.debug('Onset length = {0}'.format(len(onset_frames)))
         ans = librosa.frames_to_time(onset_frames, sr=sr)
         expect = algo.unique(map(lambda x: x[0], expect))
 
@@ -73,6 +78,9 @@ class LibrosaOnsetDetector(transcriber.Transcriber):
                 if y[0][i] == 1:
                     ans.append((time, time + 0.2, i + 9))
 
+        _logger.debug('Onset length = {0}'.format(len(onset)))
+        _logger.debug('Est length = {0}'.format(len(ans)))
+
         est_intervals = map(lambda x: (x[0], x[1]), ans)
         est_intervals = np.array(est_intervals, dtype=float)
 
@@ -86,12 +94,12 @@ class LibrosaOnsetDetector(transcriber.Transcriber):
         print len(mir_eval.transcription.match_notes(
             ref_intervals, ref_pitches,
             est_intervals, est_pitches,
-            onset_tolerance=0.1,
+            onset_tolerance=0.05,
             offset_ratio=None))
         print mir_eval.transcription.precision_recall_f1_overlap(
             ref_intervals, ref_pitches,
             est_intervals, est_pitches,
-            onset_tolerance=0.1,
+            onset_tolerance=0.05,
             offset_ratio=None)
 
     @classmethod
@@ -119,7 +127,11 @@ class LibrosaOnsetDetector(transcriber.Transcriber):
         D = np.abs(D)
 
         o_env = librosa.onset.onset_strength(y, sr=sr)
-        onset_frames = librosa.onset.onset_detect(onset_envelope=o_env, sr=sr)
+        onset_frames = librosa.onset.onset_detect(
+            onset_envelope=o_env, sr=sr,
+            pre_max=0.03 * sr // 512, post_max=0.00 * sr // 512 + 1,
+            pre_avg=0.10 * sr // 512, post_avg=0.10 * sr // 512 + 1,
+            delta=0.01, wait=0.02 * sr // 512)
         onset_frames = onset_frames.reshape(-1, 1)
 
         ans = librosa.frames_to_time(onset_frames, sr=sr)

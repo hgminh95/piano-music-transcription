@@ -28,7 +28,7 @@ def transcriber_do(action, args):
     _logger.info('Found {0} sample(s)'.format(len(files)))
 
     output = None
-    if 'output' in args:
+    if 'output' in args and args.output is not None:
         output = open(args.output, 'w')
 
     for file in files:
