@@ -6,13 +6,7 @@ import mir_eval
 import logging
 
 from sklearn.multiclass import OneVsRestClassifier
-from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_recall_curve
-from sklearn.metrics import average_precision_score
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.svm import LinearSVC
 from sklearn.externals import joblib
 
@@ -23,7 +17,7 @@ import evaluation.algo as algo
 _logger = logging.getLogger(__name__)
 
 
-class LibrosaOnsetDetector(transcriber.Transcriber):
+class SVMTranscriber(transcriber.Transcriber):
 
     _name = "librosa_onset"
     _description = "Dummy Transcriber"
@@ -65,13 +59,14 @@ class LibrosaOnsetDetector(transcriber.Transcriber):
 
         # Use classifier
         _logger.info('Extract features')
-        onset, D = LibrosaOnsetDetector.extract_features(filename + '.wav')
+        onset, D, onset_strength = SVMTranscriber.extract_features(filename + '.wav')
 
         _logger.info('Predicting...')
         ans = []
         for time, frame in onset:
             frame = int(frame)
-            X = D[:, frame]
+            X = D[:, frame - 2:frame + 3].ravel()
+            X = np.append(X, onset_strength[frame - 2:frame + 3])
             X = X.reshape(1, -1)
             y = classifier.predict(X).astype(int)
             for i in xrange(88):
@@ -106,13 +101,17 @@ class LibrosaOnsetDetector(transcriber.Transcriber):
     def construct(cls, filename, output):
         expect = read_txt(filename + '.txt')
 
-        ans, D = LibrosaOnsetDetector.extract_features(filename + '.wav')
+        ans, D, onset_strength = SVMTranscriber.extract_features(filename + '.wav')
 
         for time, frame, notes in algo.leftjoin(ans, expect):
             frame = int(frame)
+            if frame < 3:
+                continue
             output.write("{0} {1}".format(time, frame))
             output.write('\n')
-            output.write(' '.join(map(str, D[:, frame])))
+            features = D[:, frame - 2:frame + 3].ravel()
+            features = np.append(features, onset_strength[frame - 2:frame + 3])
+            output.write(' '.join(map(str, features)))
             output.write('\n')
             if len(notes) == 0:
                 output.write('-1')
@@ -138,10 +137,10 @@ class LibrosaOnsetDetector(transcriber.Transcriber):
         ans = ans.reshape(-1, 1)
         ans = np.hstack((ans, onset_frames))
 
-        return ans, D
+        return ans, D, o_env
 
     @classmethod
-    def train(cls, filename, output):
+    def obtain_data(cls, filename):
         piano_range = xrange(9, 96)
         X = []
         Y = []
@@ -182,6 +181,12 @@ class LibrosaOnsetDetector(transcriber.Transcriber):
 
         _logger.info('Split into train and test set')
         X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=.3)
+
+        return X_train, X_test, y_train, y_test
+
+    @classmethod
+    def train(cls, filename, output):
+        X_train, X_test, y_train, y_test = SVMTranscriber.obtain_data(filename)
 
         _logger.info('Training...')
         classifier = OneVsRestClassifier(LinearSVC())
