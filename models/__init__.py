@@ -4,5 +4,5 @@ import sys
 
 sys.path.append('../')
 
-import dummy
+import svm
 import nn
