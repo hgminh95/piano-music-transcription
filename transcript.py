@@ -2,13 +2,14 @@
 
 import argparse
 import logging
+
 import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import f1_score, precision_score, recall_score
+import mir_eval
 
 from core import MetaExtractor, MetaModel
 import core.util as util
-
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import f1_score, precision_score, recall_score
 
 import models
 import features
@@ -99,10 +100,6 @@ def train():
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
-    y_pred[y_pred > 0.5] = 1
-    y_pred[y_pred <= 0.5] = 0
-    y_pred = y_pred.astype(int)
-
     print "Precision: {0}".format(precision_score(y_test, y_pred, average='macro'))
     print "Recall: {0}".format(recall_score(y_test, y_pred, average='macro'))
     print "F1 score: {0}".format(f1_score(y_test, y_pred, average='macro'))
@@ -115,7 +112,40 @@ def train():
 
 
 def eval():
-    pass
+    matched = 0
+    total_ref = 0
+    total_est = 0
+
+    for sample in util.wav_walk(args.input):
+        wav_path = sample + '.wav'
+        txt_path = sample + '.txt'
+
+        expect = util.read_txt(txt_path)
+        ref_intervals, ref_pitches = util.transform(expect)
+
+        model.load(args.modelfile)
+        data = extractor.extract(wav_path)
+        ans = []
+        for (time, frame), feature in data:
+            y = model.predict(feature.reshape(1, -1))
+
+            for i in xrange(88):
+                if y[0][i] == 1:
+                    ans.append((time, time + 0.2, i + 9))
+        est_intervals, est_pitches = util.transform(ans)
+
+        matched += len(mir_eval.transcription.match_notes(
+            ref_intervals, ref_pitches,
+            est_intervals, est_pitches,
+            onset_tolerance=0.05,
+            offset_ratio=None))
+
+        total_ref += len(ref_intervals)
+        total_est += len(est_intervals)
+
+    _logger.info((matched, total_ref, total_est))
+    _logger.info("Precision: {0}".format(1.0 * matched / total_est))
+    _logger.info("Recall: {0}".format(1.0 * matched / total_ref))
 
 
 def transcribe():
@@ -138,6 +168,9 @@ if __name__ == '__main__':
         '-m', '--model',
         help='Model used',
         default='nn')
+    parser.add_argument(
+        '-mf', '--modelfile',
+        help='Model file to load')
     parser.add_argument(
         '-i', '--input',
         help='Input')

@@ -35,5 +35,12 @@ class NeuralNetwork(core.Model):
     def save(self, output):
         self.model.save(output)
 
-    def predict(self, inp):
-        return self.model.predict(inp)
+    def predict(self, X):
+        y = self.model.predict(X)
+        y[y > 0.5] = 1
+        y[y <= 0.5] = 0
+
+        return y.astype(int)
+
+    def load(self, filename):
+        self.model = load_model(filename)

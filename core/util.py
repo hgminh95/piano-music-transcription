@@ -4,6 +4,8 @@ import os
 import fnmatch
 import logging
 
+import numpy as np
+import mir_eval
 
 _logger = logging.getLogger(__name__)
 
@@ -63,3 +65,10 @@ def leftjoin(ans, expect, window=0.05, getkey=defaultgetkey):
             yield ans[i], notes
             i = incif(i, ans_len)
             notes = []
+
+
+def transform(res):
+    intervals = np.array(map(lambda x: (x[0], x[1]), res), dtype=float)
+    pitches = np.array(map(lambda x: mir_eval.util.midi_to_hz(x[2]), res), dtype=float)
+
+    return intervals, pitches

@@ -52,3 +52,6 @@ class Model(object):
 
     def predict(self, inp):
         return self.model.predict(inp)
+
+    def load(self, filename):
+        pass
