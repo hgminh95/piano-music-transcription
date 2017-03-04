@@ -8,6 +8,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, precision_score, recall_score
 import mir_eval
 
+from sklearn.metrics import matthews_corrcoef
+
 from core import MetaExtractor, MetaModel
 import core.util as util
 
@@ -28,25 +30,18 @@ def construct():
     total_samples = 0
     n_features = 0
 
-    with open(args.output, 'w') as f:
+    with open(args.output, 'wb') as f:
         for sample in util.wav_walk(args.input):
+            if 'MAPS_MUS' not in sample:
+                continue
+
             wav_path = sample + '.wav'
             txt_path = sample + '.txt'
 
             _logger.info("Extract feature from {0}".format(wav_path))
 
-            data = extractor.extract(wav_path)
-            truth = util.read_txt(txt_path)
-
-            for (meta, feature), notes in util.leftjoin(data, truth):
-                f.write("{0} {1}\n".format(meta[0], int(meta[1])))
-                f.write(' '.join(map(str, feature)))
-                f.write('\n')
-                if len(notes) == 0:
-                    f.write('-1')
-                else:
-                    f.write(' '.join(map(str, notes)))
-                f.write('\n')
+            for meta, feature, notes in extractor.extract(wav_path, truth=txt_path):
+                extractor.dump(f, (meta, feature, notes))
 
                 total_samples += 1
                 n_features = len(feature)
@@ -56,34 +51,23 @@ def construct():
 
 
 def train():
-    piano_range = xrange(9, 96)
     X = []
     Y = []
 
     _logger.info('Loading train data from file')
     n_samples = 0
     n_features = 0
-    with open(args.input, 'r') as f:
+    with open(args.input, 'rb') as f:
         while True:
-            line = f.readline()
-            if line is None or line == '':
+            try:
+                meta, feature, classes = extractor.load(f)
+            except Exception:
                 break
-            line = f.readline()
-            feature = map(float, line.rstrip().split(' '))
-            n_features = len(feature)
-            line = f.readline()
-            notes = map(int, line.rstrip().split(' '))
 
-            # Convert to sklearn format
             X.append(feature)
-
-            classes = [0] * 88
-            for note in notes:
-                if note in piano_range:
-                    classes[note - 9] = 1
-
             Y.append(classes)
 
+            n_features = len(feature)
             n_samples += 1
 
     _logger.info('Load {0} samples'.format(n_samples))
@@ -98,7 +82,30 @@ def train():
     X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=.3)
 
     model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
+
+    threshold = np.arange(0.1, 0.9, 0.1)
+
+    out = model.predict(X_test)
+
+    acc = []
+    accuracies = []
+    best_threshold = np.zeros(out.shape[1])
+    for i in range(out.shape[1]):
+        y_prob = np.array(out[:, i])
+        for j in threshold:
+            y_pred = [1 if prob >= j else 0 for prob in y_prob]
+            acc.append(matthews_corrcoef(y_test[:, i], y_pred))
+        acc = np.array(acc)
+        index = np.where(acc == acc.max())
+        accuracies.append(acc.max())
+        best_threshold[i] = threshold[index[0][0]]
+        acc = []
+
+    print best_threshold
+    print accuracies
+
+    y_pred = np.array(
+        [[1 if out[i, j] >= best_threshold[j] else 0 for j in range(y_test.shape[1])] for i in range(len(y_test))])
 
     print "Precision: {0}".format(precision_score(y_test, y_pred, average='macro'))
     print "Recall: {0}".format(recall_score(y_test, y_pred, average='macro'))
@@ -128,10 +135,13 @@ def eval():
         ans = []
         for (time, frame), feature in data:
             y = model.predict(feature.reshape(1, -1))
+            y[y > 0.4] = 1
+            y[y <= 0.4] = 0
 
             for i in xrange(88):
                 if y[0][i] == 1:
                     ans.append((time, time + 0.2, i + 9))
+        print len(data)
         est_intervals, est_pitches = util.transform(ans)
 
         matched += len(mir_eval.transcription.match_notes(

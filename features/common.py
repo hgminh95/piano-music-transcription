@@ -3,8 +3,11 @@
 import librosa
 import numpy as np
 import logging
+import struct
+from array import array
 
 import core
+from core import util
 
 _logger = logging.getLogger(__name__)
 
@@ -27,7 +30,19 @@ class SignalExtractor(core.Extractor):
     def features_at(self, frame):
         return getfeatures(self.D, self.o_env, frame)
 
-    def extract(self, filename):
+    def extract(self, filename, truth=None):
+        data = self._extract(filename)
+
+        if truth:
+            truth = util.read_txt(truth)
+
+            for (meta, feature), notes in util.leftjoin(data, truth):
+                yield meta, feature, notes
+        else:
+            for meta, feature in data:
+                yield meta, feature
+
+    def _extract(self, filename):
         y, sr = librosa.load(filename)
         self.D = self.transform(y, sr)
 
@@ -50,13 +65,41 @@ class SignalExtractor(core.Extractor):
 
         return features
 
+    def dump(self, out, data):
+        meta, features, notes = data
+
+        out.write(struct.pack('>fi', meta[0], meta[1]))
+        out.write(struct.pack('>i', len(features)))
+        out.write(struct.pack('>' + 'f' * len(features), *(features.tolist())))
+        out.write(struct.pack('>i', len(notes)))
+        out.write(struct.pack('>' + 'i' * len(notes), *notes))
+
+    def load(self, inp):
+        meta_bytes = inp.read(8)
+        if meta_bytes == b'':
+            raise Exception("EOF")
+
+        meta = struct.unpack_from('>fi', meta_bytes)
+        features_len = struct.unpack_from('>i', inp.read(4))[0]
+        features = struct.unpack_from('>' + 'f' * features_len, inp.read(4 * features_len))
+        notes_len = struct.unpack_from('>i', inp.read(4))[0]
+        notes = struct.unpack_from('>' + 'i' * notes_len, inp.read(4 * notes_len))
+
+        piano_range = xrange(9, 96)
+        classes = [0] * 88
+        for note in notes:
+            if note in piano_range:
+                classes[note - 9] = 1
+
+        return meta, features, classes
+
 
 class STFT(SignalExtractor):
 
     _name = "stft"
 
     def transform(self, y, sr):
-        return np.abs(librosa.core.stft(y, sr=sr))
+        return np.abs(librosa.core.stft(y))
 
 
 class CQT(SignalExtractor):
@@ -65,7 +108,7 @@ class CQT(SignalExtractor):
 
     def transform(self, y, sr):
         return np.abs(
-            librosa.core.cqt(y, sr=sr, hop_length=512, n_bins=252, bins_per_octave=36, real=False))
+            librosa.core.cqt(y, sr=sr, hop_length=512, n_bins=252, bins_per_octave=36))
 
 
 class MultiSTFT(STFT):

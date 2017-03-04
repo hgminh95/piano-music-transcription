@@ -5,6 +5,7 @@ import logging
 
 from keras.models import load_model, Sequential
 from keras.layers import Dense, Activation
+from keras.optimizers import SGD
 
 import core
 
@@ -22,12 +23,15 @@ class NeuralNetwork(core.Model):
         self.model = Sequential([
             Dense(200, input_dim=n_input),
             Activation('relu'),
+            Dense(200),
+            Activation('relu'),
             Dense(n_output),
             Activation('sigmoid')
         ])
+        sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
         self.model.compile(
             loss='binary_crossentropy',
-            optimizer='adadelta',
+            optimizer=sgd,
             metrics=['accuracy'])
 
         self.model.fit(X, y, nb_epoch=5)
@@ -37,10 +41,11 @@ class NeuralNetwork(core.Model):
 
     def predict(self, X):
         y = self.model.predict(X)
-        y[y > 0.5] = 1
-        y[y <= 0.5] = 0
+        return y
+        # y[y > 0.5] = 1
+        # y[y <= 0.5] = 0
 
-        return y.astype(int)
+        # return y.astype(int)
 
     def load(self, filename):
         self.model = load_model(filename)
