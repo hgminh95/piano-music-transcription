@@ -50,71 +50,39 @@ def construct():
     _logger.info("Features per sample: {0}".format(n_features))
 
 
-def train():
+def infinite_samples():
+    while True:
+        with open(args.input, 'rb') as f:
+            while True:
+                try:
+                    meta, feature, classes = extractor.load(f)
+                    yield feature, classes
+                except Exception:
+                    break
+
+
+def data_generator():
+    cnt = 0
+    n_features = 0
     X = []
     Y = []
+    for sample in infinite_samples():
+        if cnt % 1000 == 0:
+            if cnt > 0:
+                yield np.array(X).reshape(-1, n_features), np.array(Y, dtype=int).reshape(-1, 88)
+            X = []
+            Y = []
 
-    _logger.info('Loading train data from file')
-    n_samples = 0
-    n_features = 0
-    with open(args.input, 'rb') as f:
-        while True:
-            try:
-                meta, feature, classes = extractor.load(f)
-            except Exception:
-                break
+        feature, classes = sample
+        n_features = len(feature)
+        X.append(feature)
+        Y.append(classes)
 
-            X.append(feature)
-            Y.append(classes)
+        cnt += 1
 
-            n_features = len(feature)
-            n_samples += 1
 
-    _logger.info('Load {0} samples'.format(n_samples))
-
-    X = np.array(X).reshape(-1, n_features)
-    Y = np.array(Y, dtype=int).reshape(-1, 88)
-
-    X = X - X.mean(axis=0, keepdims=True)
-    X = X / X.std(axis=0)
-
-    _logger.info('Split into train and test set')
-    X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=.3)
-
-    model.fit(X_train, y_train)
-
-    threshold = np.arange(0.1, 0.9, 0.1)
-
-    out = model.predict(X_test)
-
-    acc = []
-    accuracies = []
-    best_threshold = np.zeros(out.shape[1])
-    for i in range(out.shape[1]):
-        y_prob = np.array(out[:, i])
-        for j in threshold:
-            y_pred = [1 if prob >= j else 0 for prob in y_prob]
-            acc.append(matthews_corrcoef(y_test[:, i], y_pred))
-        acc = np.array(acc)
-        index = np.where(acc == acc.max())
-        accuracies.append(acc.max())
-        best_threshold[i] = threshold[index[0][0]]
-        acc = []
-
-    print best_threshold
-    print accuracies
-
-    y_pred = np.array(
-        [[1 if out[i, j] >= best_threshold[j] else 0 for j in range(y_test.shape[1])] for i in range(len(y_test))])
-
-    print "Precision: {0}".format(precision_score(y_test, y_pred, average='macro'))
-    print "Recall: {0}".format(recall_score(y_test, y_pred, average='macro'))
-    print "F1 score: {0}".format(f1_score(y_test, y_pred, average='macro'))
-
-    print np.unique(y_test, return_counts=True)
-    print np.unique(y_pred, return_counts=True)
-    print np.unique(y_test - y_pred, return_counts=True)
-
+def train():
+    model.fit_generator(data_generator)
     model.save(args.output)
 
 
@@ -131,17 +99,14 @@ def eval():
         ref_intervals, ref_pitches = util.transform(expect)
 
         model.load(args.modelfile)
-        data = extractor.extract(wav_path)
         ans = []
-        for (time, frame), feature in data:
+        for (time, frame), feature in extractor.extract(wav_path):
             y = model.predict(feature.reshape(1, -1))
-            y[y > 0.4] = 1
-            y[y <= 0.4] = 0
 
             for i in xrange(88):
                 if y[0][i] == 1:
                     ans.append((time, time + 0.2, i + 9))
-        print len(data)
+
         est_intervals, est_pitches = util.transform(ans)
 
         matched += len(mir_eval.transcription.match_notes(
