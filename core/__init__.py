@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import os
+import json
+
 
 class MetaExtractor(type):
 
@@ -43,15 +46,28 @@ class Model(object):
 
     def __init__(self):
         self.model = None
+        self.parameters = {}
 
     def fit(self, X, y):
         pass
 
     def save(self, filename):
-        self.model.save(filename)
+        pass
+
+    def _save_metadata(self, filename):
+        filename, ext = os.path.splitext(filename)
+
+        with open(filename + '.meta', 'w') as f:
+            json.dump(self.parameters, f, indent=4)
 
     def predict(self, inp):
         return self.model.predict(inp)
 
     def load(self, filename):
         pass
+
+    def _load_metadata(self, filename):
+        filename, ext = os.path.splitext(filename)
+
+        with open(filename + '.meta', 'r') as f:
+            self.parameters = json.load(f)

@@ -3,3 +3,4 @@ samples/
 *.out
 *.data
 *.pkl
+*.meta

@@ -31,6 +31,8 @@ class NeuralNetwork(core.Model):
     def save(self, output):
         self.model.save(output)
 
+        self._save_metadata(output)
+
     def predict(self, X):
         y = self.model.predict(X)
 
@@ -41,6 +43,8 @@ class NeuralNetwork(core.Model):
 
     def load(self, filename):
         self.model = load_model(filename)
+
+        self._load_metadata(filename)
 
     def _build_model(self, n_input, n_output):
         print "Build model with n_input = {}, n_output = {}".format(n_input, n_output)
