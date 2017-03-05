@@ -147,9 +147,15 @@ def eval():
         total_ref += len(ref_intervals)
         total_est += len(est_intervals)
 
-    _logger.info((matched, total_ref, total_est))
-    _logger.info("Precision: {0}".format(1.0 * matched / total_est))
-    _logger.info("Recall: {0}".format(1.0 * matched / total_ref))
+    precision = 1.0 * matched / total_est
+    recall = 1.0 * matched / total_ref
+    f1_measure = 2 * (precision * recall) / (precision + recall)
+
+    _logger.info("Total ref/Total est: {}/{}".format(total_ref, total_est))
+    _logger.info("Matched: {}".format(matched))
+    _logger.info("Precision: {0}".format(precision))
+    _logger.info("Recall: {0}".format(recall))
+    _logger.info("F1 measure: {0}".format(f1_measure))
 
 
 def transcribe():
@@ -187,8 +193,8 @@ if __name__ == '__main__':
     extractor = MetaExtractor.method_to_extractor[args.extract]()
     model = MetaModel.method_to_model[args.model]()
 
-    print extractor
-    print model
+    _logger.info("Extractor: {}".format(extractor._description))
+    _logger.info("Model: {}".format(model._description))
 
     if args.action == 'construct':
         construct()

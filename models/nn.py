@@ -15,6 +15,7 @@ _logger = logging.getLogger(__name__)
 class NeuralNetwork(core.Model):
 
     _name = "nn"
+    _description = "Neural Network"
 
     def __init__(self):
         super(NeuralNetwork, self).__init__()

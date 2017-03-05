@@ -96,6 +96,7 @@ class SignalExtractor(core.Extractor):
 class STFT(SignalExtractor):
 
     _name = "stft"
+    _description = "Short Time Fourier Transform"
 
     def transform(self, y, sr):
         return np.abs(librosa.core.stft(y))
@@ -104,6 +105,7 @@ class STFT(SignalExtractor):
 class CQT(SignalExtractor):
 
     _name = "cqt"
+    _description = "Constant Q transform"
 
     def transform(self, y, sr):
         return np.abs(
@@ -113,6 +115,7 @@ class CQT(SignalExtractor):
 class MultiSTFT(STFT):
 
     _name = "mul.stft"
+    _description = "Short Time Fourier Transform with Multiple Frames"
 
     def features_at(self, frame):
         return getfeatures(self.D, self.o_env, frame, left=2, right=2)
@@ -121,6 +124,7 @@ class MultiSTFT(STFT):
 class MultiCQT(CQT):
 
     _name = "mul.cqt"
+    _description = "Constant Q Transform with Multiple Frames"
 
     def features_at(self, frame):
         return getfeatures(self.D, self.o_env, frame, left=2, right=2)
