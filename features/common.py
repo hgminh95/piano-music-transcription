@@ -62,8 +62,6 @@ class SignalExtractor(core.Extractor):
             self.features_at(int(x[1]))
         ), onset)
 
-        print np.array(features).shape
-
         return features
 
     def dump(self, out, data):

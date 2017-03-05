@@ -5,7 +5,6 @@ import logging
 import random
 
 import numpy as np
-from sklearn.metrics import f1_score, precision_score, recall_score
 import mir_eval
 
 from core import MetaExtractor, MetaModel
@@ -103,6 +102,8 @@ def data_generator(loop=True):
 
 def train():
     for X, Y in data_generator(loop=False):
+        model.parameters['mean'] = X.mean(axis=0).tolist()
+        model.parameters['std'] = X.std(axis=0).tolist()
         model.fit(X, Y)
         break
 
