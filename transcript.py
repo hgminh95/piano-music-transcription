@@ -2,13 +2,11 @@
 
 import argparse
 import logging
+import random
 
 import numpy as np
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, precision_score, recall_score
 import mir_eval
-
-from sklearn.metrics import matthews_corrcoef
 
 from core import MetaExtractor, MetaModel
 import core.util as util
@@ -50,7 +48,7 @@ def construct():
     _logger.info("Features per sample: {0}".format(n_features))
 
 
-def infinite_samples():
+def infinite_samples(loop=True):
     while True:
         with open(args.input, 'rb') as f:
             while True:
@@ -60,16 +58,27 @@ def infinite_samples():
                 except Exception:
                     break
 
+        if not loop:
+            break
 
-def data_generator():
+
+def data_generator(loop=True):
     cnt = 0
     n_features = 0
     X = []
     Y = []
-    for sample in infinite_samples():
-        if cnt % 1000 == 0:
+    for sample in infinite_samples(loop=loop):
+        if cnt % 40000 == 0:
             if cnt > 0:
-                yield np.array(X).reshape(-1, n_features), np.array(Y, dtype=int).reshape(-1, 88)
+                seed = random.randint(0, 1000)
+                X = np.array(X).reshape(-1, n_features)
+                Y = np.array(Y, dtype=int).reshape(-1, 88)
+                np.random.seed(seed)
+                np.random.shuffle(X)
+                np.random.seed(seed)
+                np.random.shuffle(Y)
+
+                yield X, Y
             X = []
             Y = []
 
@@ -80,9 +89,23 @@ def data_generator():
 
         cnt += 1
 
+    if len(X) > 0:
+        seed = random.randint(0, 1000)
+        X = np.array(X).reshape(-1, n_features)
+        Y = np.array(Y, dtype=int).reshape(-1, 88)
+        np.random.seed(seed)
+        np.random.shuffle(X)
+        np.random.seed(seed)
+        np.random.shuffle(Y)
+
+        yield X, Y
+
 
 def train():
-    model.fit_generator(data_generator)
+    for X, Y in data_generator(loop=False):
+        model.fit(X, Y)
+        break
+
     model.save(args.output)
 
 
@@ -107,13 +130,18 @@ def eval():
                 if y[0][i] == 1:
                     ans.append((time, time + 0.2, i + 9))
 
+        if len(ans) > 3 * len(expect):
+            _logger.warn("Precision is too low (< 33%)")
+            continue
+
         est_intervals, est_pitches = util.transform(ans)
 
-        matched += len(mir_eval.transcription.match_notes(
-            ref_intervals, ref_pitches,
-            est_intervals, est_pitches,
-            onset_tolerance=0.05,
-            offset_ratio=None))
+        if len(ans) > 0:
+            matched += len(mir_eval.transcription.match_notes(
+                ref_intervals, ref_pitches,
+                est_intervals, est_pitches,
+                onset_tolerance=0.05,
+                offset_ratio=None))
 
         total_ref += len(ref_intervals)
         total_est += len(est_intervals)

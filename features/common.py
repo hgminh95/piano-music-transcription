@@ -4,7 +4,6 @@ import librosa
 import numpy as np
 import logging
 import struct
-from array import array
 
 import core
 from core import util
@@ -62,6 +61,8 @@ class SignalExtractor(core.Extractor):
             (x[0], x[1]),
             self.features_at(int(x[1]))
         ), onset)
+
+        print np.array(features).shape
 
         return features
 

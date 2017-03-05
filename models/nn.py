@@ -17,7 +17,8 @@ class NeuralNetwork(core.Model):
     _name = "nn"
 
     def fit(self, X, y):
-        self._build_model(X.shape[1], y.shape[1])
+        if self.model is None:
+            self._build_model(X.shape[1], y.shape[1])
 
         self.model.fit(X, y, nb_epoch=5)
 
@@ -25,7 +26,7 @@ class NeuralNetwork(core.Model):
         X, y = generator().next()
         self._build_model(X.shape[1], y.shape[1])
 
-        self.model.fit_generator(generator(), samples_per_epoch=10000, nb_epoch=5)
+        self.model.fit_generator(generator(), samples_per_epoch=50000, nb_epoch=20)
 
     def save(self, output):
         self.model.save(output)
@@ -42,10 +43,11 @@ class NeuralNetwork(core.Model):
         self.model = load_model(filename)
 
     def _build_model(self, n_input, n_output):
+        print "Build model with n_input = {}, n_output = {}".format(n_input, n_output)
         self.model = Sequential([
             Dense(200, input_dim=n_input),
-            Activation('relu'),
-            Dense(200),
+            # Activation('relu'),
+            # Dense(200),
             Activation('relu'),
             Dense(n_output),
             Activation('sigmoid')
