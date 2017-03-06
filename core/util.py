@@ -72,3 +72,16 @@ def transform(res):
     pitches = np.array(map(lambda x: mir_eval.util.midi_to_hz(x[2]), res), dtype=float)
 
     return intervals, pitches
+
+
+def score(matched, total_est, total_ref):
+    precision = 1.0 * matched / total_est
+    recall = 1.0 * matched / total_ref
+    f1_measure = 2 * (precision * recall) / (precision + recall)
+
+    print "Total estimation/references: {}/{}".format(total_est, total_ref)
+    print "Matched: {}".format(matched)
+    print ""
+    print "Precision: {}".format(precision)
+    print "Recall: {}".format(recall)
+    print "F1: {}".format(f1_measure)

@@ -47,9 +47,9 @@ def construct():
     _logger.info("Features per sample: {0}".format(n_features))
 
 
-def infinite_samples(loop=True):
+def infinite_samples(input, loop=True):
     while True:
-        with open(args.input, 'rb') as f:
+        with open(input, 'rb') as f:
             while True:
                 try:
                     meta, feature, classes = extractor.load(f)
@@ -61,12 +61,12 @@ def infinite_samples(loop=True):
             break
 
 
-def data_generator(loop=True):
+def data_generator(input, loop=True):
     cnt = 0
     n_features = 0
     X = []
     Y = []
-    for sample in infinite_samples(loop=loop):
+    for sample in infinite_samples(input, loop=loop):
         if cnt % 40000 == 0:
             if cnt > 0:
                 seed = random.randint(0, 1000)
@@ -101,13 +101,35 @@ def data_generator(loop=True):
 
 
 def train():
-    for X, Y in data_generator(loop=False):
-        model.parameters['mean'] = X.mean(axis=0).tolist()
-        model.parameters['std'] = X.std(axis=0).tolist()
-        model.fit(X, Y)
+    # Calculate mean and std in entire collection
+    mean = 0
+    std = 0
+    for X, Y in data_generator(args.input, loop=False):
+        # Only take the first batch, will be fixed later
+        mean = X.mean(axis=0).tolist()
+        std = X.std(axis=0).tolist()
         break
 
+    model.parameters['mean'] = mean
+    model.parameters['std'] = std
+
+    for X, Y in data_generator(args.input, loop=False):
+        model.fit(X, Y)
+
     model.save(args.output)
+
+    if args.test:
+        total_ref = 0
+        total_est = 0
+        matched = 0
+        for X, y in data_generator(args.test, loop=False):
+            y_pred = model.predict(X)
+
+            total_est += np.count_nonzero(y_pred)
+            total_ref += np.count_nonzero(y)
+            matched += (np.count_nonzero(y_pred) + np.count_nonzero(y) - np.count_nonzero(y_pred - y)) / 2
+
+        util.score(matched, total_est, total_ref)
 
 
 def eval():
@@ -125,6 +147,8 @@ def eval():
         model.load(args.modelfile)
         ans = []
         for (time, frame), feature in extractor.extract(wav_path):
+            if len(feature) != 1265:
+                continue
             y = model.predict(feature.reshape(1, -1))
 
             for i in xrange(88):
@@ -132,7 +156,7 @@ def eval():
                     ans.append((time, time + 0.2, i + 9))
 
         if len(ans) > 3 * len(expect):
-            _logger.warn("Precision is too low (< 33%)")
+            _logger.warn("Precision is too low (< 33%) ans: {}, expect: {}".format(len(ans), len(expect)))
             continue
 
         est_intervals, est_pitches = util.transform(ans)
@@ -147,15 +171,7 @@ def eval():
         total_ref += len(ref_intervals)
         total_est += len(est_intervals)
 
-    precision = 1.0 * matched / total_est
-    recall = 1.0 * matched / total_ref
-    f1_measure = 2 * (precision * recall) / (precision + recall)
-
-    _logger.info("Total ref/Total est: {}/{}".format(total_ref, total_est))
-    _logger.info("Matched: {}".format(matched))
-    _logger.info("Precision: {0}".format(precision))
-    _logger.info("Recall: {0}".format(recall))
-    _logger.info("F1 measure: {0}".format(f1_measure))
+    util.score(matched, total_est, total_ref)
 
 
 def transcribe():
@@ -187,6 +203,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '-o', '--output',
         help='Output')
+    parser.add_argument(
+        '-t', '--test',
+        help='Test data')
 
     args = parser.parse_args()
 
