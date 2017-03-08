@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 import argparse
 import logging
 import random
@@ -118,59 +119,56 @@ def train():
 
     model.save(args.output)
 
-    if args.test:
-        total_ref = 0
-        total_est = 0
-        matched = 0
-        for X, y in data_generator(args.test, loop=False):
-            y_pred = model.predict(X)
-
-            total_est += np.count_nonzero(y_pred)
-            total_ref += np.count_nonzero(y)
-            matched += (np.count_nonzero(y_pred) + np.count_nonzero(y) - np.count_nonzero(y_pred - y)) / 2
-
-        util.score(matched, total_est, total_ref)
-
 
 def eval():
     matched = 0
     total_ref = 0
     total_est = 0
 
-    for sample in util.wav_walk(args.input):
-        wav_path = sample + '.wav'
-        txt_path = sample + '.txt'
+    model.load(args.modelfile)
 
-        expect = util.read_txt(txt_path)
-        ref_intervals, ref_pitches = util.transform(expect)
+    if os.path.isdir(args.test):
+        for sample in util.wav_walk(args.test):
+            wav_path = sample + '.wav'
+            txt_path = sample + '.txt'
 
-        model.load(args.modelfile)
-        ans = []
-        for (time, frame), feature in extractor.extract(wav_path):
-            if len(feature) != 1265:
+            expect = util.read_txt(txt_path)
+            ref_intervals, ref_pitches = util.transform(expect)
+
+            ans = []
+            for (time, frame), feature in extractor.extract(wav_path):
+                if len(feature) != 1265:
+                    continue
+                y = model.predict(feature.reshape(1, -1))
+
+                for i in xrange(88):
+                    if y[0][i] == 1:
+                        ans.append((time, time + 0.2, i + 9))
+
+            if len(ans) > 3 * len(expect):
+                _logger.warn("Precision is too low (< 33%) ans: {}, expect: {}".format(len(ans), len(expect)))
                 continue
-            y = model.predict(feature.reshape(1, -1))
 
-            for i in xrange(88):
-                if y[0][i] == 1:
-                    ans.append((time, time + 0.2, i + 9))
+            est_intervals, est_pitches = util.transform(ans)
 
-        if len(ans) > 3 * len(expect):
-            _logger.warn("Precision is too low (< 33%) ans: {}, expect: {}".format(len(ans), len(expect)))
-            continue
+            if len(ans) > 0:
+                matched += len(mir_eval.transcription.match_notes(
+                    ref_intervals, ref_pitches,
+                    est_intervals, est_pitches,
+                    onset_tolerance=0.05,
+                    offset_ratio=None))
 
-        est_intervals, est_pitches = util.transform(ans)
+            total_ref += len(ref_intervals)
+            total_est += len(est_intervals)
+    else:
+        for X, y in data_generator(args.test, loop=False):
+            y_pred = model.predict(X, threshold=0.5)
 
-        if len(ans) > 0:
-            matched += len(mir_eval.transcription.match_notes(
-                ref_intervals, ref_pitches,
-                est_intervals, est_pitches,
-                onset_tolerance=0.05,
-                offset_ratio=None))
+            total_est += np.count_nonzero(y_pred)
+            total_ref += np.count_nonzero(y)
+            matched += (np.count_nonzero(y_pred) + np.count_nonzero(y) - np.count_nonzero(y_pred - y)) / 2
 
-        total_ref += len(ref_intervals)
-        total_est += len(est_intervals)
-
+    _logger.info("Result")
     util.score(matched, total_est, total_ref)
 
 

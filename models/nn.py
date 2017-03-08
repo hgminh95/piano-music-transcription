@@ -4,7 +4,7 @@ import numpy as np
 import logging
 
 from keras.models import load_model, Sequential
-from keras.layers import Dense, Activation
+from keras.layers import Dense, Activation, Dropout
 from keras.optimizers import SGD
 
 import core
@@ -37,7 +37,7 @@ class NeuralNetwork(core.Model):
         if self.parameters['mean'] is not None and self.parameters['std'] is not None:
             X = (X - self.parameters['mean']) / self.parameters['std']
 
-        self.model.fit(X, y, nb_epoch=5)
+        self.model.fit(X, y, nb_epoch=10)
 
     def fit_generator(self, generator):
         X, y = generator().next()
@@ -50,14 +50,18 @@ class NeuralNetwork(core.Model):
 
         self._save_metadata(output)
 
-    def predict(self, X):
+    def predict(self, X, **kw):
         if self.parameters['mean'] is not None and self.parameters['std'] is not None:
             X = (X - self.parameters['mean']) / self.parameters['std']
 
         y = self.model.predict(X)
 
-        y[y > 0.3] = 1
-        y[y <= 0.3] = 0
+        threshold = 0.3
+        if 'threshold' in kw:
+            threshold = kw['threshold']
+
+        y[y > threshold] = 1
+        y[y <= threshold] = 0
 
         return y.astype(int)
 
@@ -69,10 +73,15 @@ class NeuralNetwork(core.Model):
     def _build_model(self, n_input, n_output):
         _logger.debug("Build model with n_input = {}, n_output = {}".format(n_input, n_output))
         self.model = Sequential([
-            Dense(200, input_dim=n_input),
-            # Activation('relu'),
-            # Dense(200),
+            Dense(125, input_dim=n_input),
             Activation('relu'),
+            # Dropout(0.3),
+            Dense(125),
+            Activation('relu'),
+            # Dropout(0.3),
+            # Dense(125),
+            # Activation('relu'),
+            # Dropout(0.3),
             Dense(n_output),
             Activation('sigmoid')
         ])
@@ -80,4 +89,4 @@ class NeuralNetwork(core.Model):
         self.model.compile(
             loss='binary_crossentropy',
             optimizer=sgd,
-            metrics=['accuracy'])
+            metrics=['accuracy', 'precision', 'recall', 'fmeasure'])
