@@ -28,6 +28,7 @@ class NeuralNetwork(core.Model):
             'optimizer': 'sgd',
             'mean': None,
             'std': None,
+            'threshold': 0.5,
         }
 
     def fit(self, X, y):
@@ -50,18 +51,14 @@ class NeuralNetwork(core.Model):
 
         self._save_metadata(output)
 
-    def predict(self, X, **kw):
+    def predict(self, X):
         if self.parameters['mean'] is not None and self.parameters['std'] is not None:
             X = (X - self.parameters['mean']) / self.parameters['std']
 
         y = self.model.predict(X)
 
-        threshold = 0.3
-        if 'threshold' in kw:
-            threshold = kw['threshold']
-
-        y[y > threshold] = 1
-        y[y <= threshold] = 0
+        y[y > self.parameters['threshold']] = 1
+        y[y <= self.parameters['threshold']] = 0
 
         return y.astype(int)
 
