@@ -5,7 +5,6 @@ import logging
 
 from keras.models import load_model, Sequential
 from keras.layers import Dense, Activation, Dropout
-from keras.optimizers import SGD
 
 import core
 
@@ -21,14 +20,15 @@ class NeuralNetwork(core.Model):
         super(NeuralNetwork, self).__init__()
 
         self.parameters = {
-            'layer': 1,
-            'unit': 200,
+            'layer': 2,
+            'unit': 125,
             'dropout': 0.3,
             'activation': 'relu',
             'optimizer': 'sgd',
             'mean': None,
             'std': None,
             'threshold': 0.5,
+            'epoch': 10,
         }
 
     def fit(self, X, y):
@@ -38,7 +38,7 @@ class NeuralNetwork(core.Model):
         if self.parameters['mean'] is not None and self.parameters['std'] is not None:
             X = (X - self.parameters['mean']) / self.parameters['std']
 
-        self.model.fit(X, y, nb_epoch=10)
+        self.model.fit(X, y, nb_epoch=self.parameters['epoch'])
 
     def fit_generator(self, generator):
         X, y = generator().next()
@@ -68,22 +68,23 @@ class NeuralNetwork(core.Model):
         self._load_metadata(filename)
 
     def _build_model(self, n_input, n_output):
-        _logger.debug("Build model with n_input = {}, n_output = {}".format(n_input, n_output))
-        self.model = Sequential([
-            Dense(125, input_dim=n_input),
-            Activation('relu'),
-            # Dropout(0.3),
-            Dense(125),
-            Activation('relu'),
-            # Dropout(0.3),
-            # Dense(125),
-            # Activation('relu'),
-            # Dropout(0.3),
-            Dense(n_output),
-            Activation('sigmoid')
-        ])
-        sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+        self.model = Sequential()
+
+        self.model.add(
+            Dense(
+                self.parameters['unit'],
+                input_dim=n_input, activation=self.parameters['activation']))
+
+        for i in xrange(self.parameters['layer'] - 1):
+            self.model.add(
+                Dense(
+                    self.parameters['unit'],
+                    activation=self.parameters['activation']))
+
+        self.model.add(
+            Dense(n_output, activation='sigmoid'))
+
         self.model.compile(
             loss='binary_crossentropy',
-            optimizer=sgd,
-            metrics=['accuracy', 'precision', 'recall', 'fmeasure'])
+            optimizer=self.parameters['optimizer'],
+            metrics=['precision', 'recall', 'fmeasure'])

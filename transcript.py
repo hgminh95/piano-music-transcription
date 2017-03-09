@@ -140,7 +140,7 @@ def train():
                 best_threshold = threshold
                 max_f1 = f1
 
-            _logger.info(" p: {}, r: {}, f1: {}", precision, recall, f1)
+            _logger.info(" p: {}, r: {}, f1: {}".format(precision, recall, f1))
 
         model.parameters['threshold'] = best_threshold
 
