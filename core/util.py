@@ -74,10 +74,16 @@ def transform(res):
     return intervals, pitches
 
 
-def score(matched, total_est, total_ref):
+def eval(matched, total_est, total_ref):
     precision = 1.0 * matched / total_est
     recall = 1.0 * matched / total_ref
     f1_measure = 2 * (precision * recall) / (precision + recall)
+
+    return precision, recall, f1_measure
+
+
+def score(matched, total_est, total_ref):
+    precision, recall, f1_measure = eval(matched, total_est, total_ref)
 
     print "Total estimation/references: {}/{}".format(total_est, total_ref)
     print "Matched: {}".format(matched)

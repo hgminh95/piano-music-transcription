@@ -118,24 +118,33 @@ def train():
         model.fit(X, Y)
 
     if args.test:
-        max_matched = 0
+        max_f1 = 0
         best_threshold = 0.1
         for threshold in np.arange(0.1, 1.0, 0.1):
             model.parameters['threshold'] = threshold
 
             matched = 0
+            total_est = 0
+            total_ref = 0
             for X, y in data_generator(args.test, loop=False):
                 y_pred = model.predict(X)
 
+                total_est += np.count_nonzero(y_pred)
+                total_ref += np.count_nonzero(y)
                 matched += (np.count_nonzero(y_pred) + np.count_nonzero(y) - np.count_nonzero(y_pred - y)) / 2
 
-            if matched > max_matched:
+            _logger.info("Try with threshold = {}".format(threshold))
+
+            precision, recall, f1 = util.eval(matched, total_est, total_ref)
+            if f1 > max_f1:
                 best_threshold = threshold
-                max_matched = matched
+                max_f1 = f1
+
+            _logger.info(" p: {}, r: {}, f1: {}", precision, recall, f1)
 
         model.parameters['threshold'] = best_threshold
 
-        _logger.info("Best threshold: {} - matched: {}".format(best_threshold, max_matched))
+        _logger.info("Best threshold: {} - f1: {}".format(best_threshold, max_f1))
 
     model.save(args.output)
 
