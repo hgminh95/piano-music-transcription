@@ -6,3 +6,4 @@ sys.path.append('../')
 
 import svm
 import nn
+import cnn
