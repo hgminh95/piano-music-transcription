@@ -114,8 +114,9 @@ def train():
     model.parameters['mean'] = mean
     model.parameters['std'] = std
 
-    for X, Y in data_generator(args.input, loop=False):
-        model.fit(X, Y)
+    for i in xrange(2):
+        for X, Y in data_generator(args.input, loop=False):
+            model.fit(X, Y)
 
     if args.test:
         max_f1 = 0

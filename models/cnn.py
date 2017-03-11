@@ -19,6 +19,9 @@ class ConvolutionNeuralNetwork(nn.NeuralNetwork):
         super(ConvolutionNeuralNetwork, self).__init__()
 
         self.parameters['optimizer'] = 'adagrad'
+        self.parameters['epoch'] = 5
+        self.parameters['layer'] = 2
+        self.parameters['unit'] = 200
 
     def fit(self, X, y):
         if self.parameters['mean'] is not None and self.parameters['std'] is not None:
@@ -30,7 +33,7 @@ class ConvolutionNeuralNetwork(nn.NeuralNetwork):
         if self.model is None:
             self._build_model((X.shape[1], X.shape[2], 1), y.shape[1])
 
-        self.model.fit(X, y, nb_epoch=5)
+        self.model.fit(X, y, nb_epoch=self.parameters['epoch'])
 
     def predict(self, X):
         if self.parameters['mean'] is not None and self.parameters['std'] is not None:
@@ -58,6 +61,11 @@ class ConvolutionNeuralNetwork(nn.NeuralNetwork):
                 dim_ordering='tf', input_shape=input_shape,
                 activation=self.parameters['activation']))
 
+        self.model.add(
+            Convolution2D(
+                nb_filter, kernel_size[0], kernel_size[1],
+                activation=self.parameters['activation']))
+
         self.model.add(MaxPooling2D())
         self.model.add(Flatten())
 
@@ -66,6 +74,9 @@ class ConvolutionNeuralNetwork(nn.NeuralNetwork):
                 Dense(
                     self.parameters['unit'],
                     activation=self.parameters['activation']))
+            if self.parameters['dropout'] > 0.0001:
+                self.model.add(
+                    Dropout(self.parameters['dropout']))
 
         self.model.add(
             Dense(n_output, activation='sigmoid'))

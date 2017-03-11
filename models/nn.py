@@ -21,14 +21,14 @@ class NeuralNetwork(core.Model):
 
         self.parameters = {
             'layer': 2,
-            'unit': 125,
-            'dropout': 0.3,
+            'unit': 150,
+            'dropout': 0.0,
             'activation': 'relu',
             'optimizer': 'sgd',
             'mean': None,
             'std': None,
             'threshold': 0.5,
-            'epoch': 10,
+            'epoch': 5,
         }
 
     def fit(self, X, y):
@@ -80,6 +80,9 @@ class NeuralNetwork(core.Model):
                 Dense(
                     self.parameters['unit'],
                     activation=self.parameters['activation']))
+            if self.parameters['dropout'] > 0.0001:
+                self.model.add(
+                    Dropout(self.parameters['dropout']))
 
         self.model.add(
             Dense(n_output, activation='sigmoid'))
