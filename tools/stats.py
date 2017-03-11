@@ -58,8 +58,8 @@ def stats(input_dir):
     print ""
 
     keys = list(notes.keys())
-    note_range = xrange(min(keys), max(keys))
-    missing_note = filter(lambda x: x in notes, note_range)
+    note_range = xrange(min(keys), max(keys) + 1)
+    missing_note = filter(lambda x: x not in notes, note_range)
     print "====================="
     print "Notes"
     print "====================="
