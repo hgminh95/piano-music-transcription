@@ -9,8 +9,9 @@ import random
 import numpy as np
 import mir_eval
 
+import core
 from core import MetaExtractor, MetaModel
-import core.util as util
+from core import util
 
 import models
 import features
@@ -148,6 +149,9 @@ def eval():
 
     if os.path.isdir(args.test):
         for sample in util.wav_walk(args.test):
+            if 'MAPS_MUS' not in sample:
+                continue
+
             wav_path = sample + '.wav'
             txt_path = sample + '.txt'
 
@@ -156,13 +160,11 @@ def eval():
 
             ans = []
             for (time, frame), feature in extractor.extract(wav_path):
-                if len(feature) != 1265:
-                    continue
                 y = model.predict(feature.reshape(1, -1))
 
-                for i in xrange(88):
+                for i in xrange(y.shape[1]):
                     if y[0][i] == 1:
-                        ans.append((time, time + 0.2, i + 9))
+                        ans.append((time, time + 0.2, i + min(core.piano_range)))
 
             if len(ans) > 3 * len(expect):
                 _logger.warn("Precision is too low (< 33%) ans: {}, expect: {}".format(len(ans), len(expect)))
