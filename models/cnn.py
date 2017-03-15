@@ -19,14 +19,11 @@ class ConvolutionNeuralNetwork(nn.NeuralNetwork):
         super(ConvolutionNeuralNetwork, self).__init__()
 
         self.parameters['optimizer'] = 'adagrad'
-        self.parameters['epoch'] = 5
+        self.parameters['epoch'] = 3
         self.parameters['layer'] = 2
         self.parameters['unit'] = 200
 
     def fit(self, X, y):
-        if self.parameters['mean'] is not None and self.parameters['std'] is not None:
-            X = (X - self.parameters['mean']) / self.parameters['std']
-
         X = self._transform(X)
         X = X.reshape(X.shape + (1, ))
 
@@ -36,9 +33,6 @@ class ConvolutionNeuralNetwork(nn.NeuralNetwork):
         self.model.fit(X, y, nb_epoch=self.parameters['epoch'])
 
     def predict(self, X):
-        if self.parameters['mean'] is not None and self.parameters['std'] is not None:
-            X = (X - self.parameters['mean']) / self.parameters['std']
-
         X = self._transform(X)
         X = X.reshape(X.shape + (1, ))
 
