@@ -33,13 +33,13 @@ class NeuralNetwork(core.Model):
         if self.model is None:
             self._build_model(X.shape[1], y.shape[1])
 
-        self.model.fit(X, y, nb_epoch=self.parameters['epoch'])
+        self.model.fit(X, y, epochs=self.parameters['epoch'])
 
     def fit_generator(self, generator):
         X, y = generator().next()
         self._build_model(X.shape[1], y.shape[1])
 
-        self.model.fit_generator(generator(), samples_per_epoch=50000, nb_epoch=20)
+        self.model.fit_generator(generator(), samples_per_epoch=50000, epochs=self.parameters['epoch'])
 
     def save(self, output):
         self.model.save(output)
@@ -82,4 +82,4 @@ class NeuralNetwork(core.Model):
         self.model.compile(
             loss='binary_crossentropy',
             optimizer=self.parameters['optimizer'],
-            metrics=['precision', 'recall', 'fmeasure'])
+            metrics=[])

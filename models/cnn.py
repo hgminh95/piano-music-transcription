@@ -4,7 +4,7 @@ import numpy as np
 import logging
 
 from keras.models import load_model, Sequential
-from keras.layers import Dense, Activation, Dropout, Convolution2D, Flatten, MaxPooling2D
+from keras.layers import Dense, Activation, Dropout, Conv2D, Flatten, MaxPooling2D
 from keras.optimizers import SGD
 
 import nn
@@ -30,7 +30,7 @@ class ConvolutionNeuralNetwork(nn.NeuralNetwork):
         if self.model is None:
             self._build_model((X.shape[1], X.shape[2], 1), y.shape[1])
 
-        self.model.fit(X, y, nb_epoch=self.parameters['epoch'])
+        self.model.fit(X, y, epochs=self.parameters['epoch'])
 
     def predict(self, X):
         X = self._transform(X)
@@ -50,14 +50,14 @@ class ConvolutionNeuralNetwork(nn.NeuralNetwork):
         self.model = Sequential()
 
         self.model.add(
-            Convolution2D(
-                nb_filter, kernel_size[0], kernel_size[1],
-                dim_ordering='tf', input_shape=input_shape,
+            Conv2D(
+                nb_filter, kernel_size,
+                data_format='channels_last', input_shape=input_shape,
                 activation=self.parameters['activation']))
 
         self.model.add(
-            Convolution2D(
-                nb_filter, kernel_size[0], kernel_size[1],
+            Conv2D(
+                nb_filter, kernel_size,
                 activation=self.parameters['activation']))
 
         self.model.add(MaxPooling2D())
@@ -78,7 +78,7 @@ class ConvolutionNeuralNetwork(nn.NeuralNetwork):
         self.model.compile(
             loss='binary_crossentropy',
             optimizer=self.parameters['optimizer'],
-            metrics=['precision', 'recall', 'fmeasure'])
+            metrics=[])
 
     def _transform(self, X):
         for feature_per_frame in [253, 11111]:
