@@ -102,18 +102,6 @@ def data_generator(input, loop=True):
 
 
 def train():
-    # Calculate mean and std in entire collection
-    mean = 0
-    std = 0
-    for X, Y in data_generator(args.input, loop=False):
-        # Only take the first batch, will be fixed later
-        mean = X.mean(axis=0).tolist()
-        std = X.std(axis=0).tolist()
-        break
-
-    model.parameters['mean'] = mean
-    model.parameters['std'] = std
-
     for i in xrange(2):
         for X, Y in data_generator(args.input, loop=False):
             model.fit(X, Y)
