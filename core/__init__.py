@@ -3,6 +3,8 @@
 import os
 import json
 
+piano_range = xrange(25, 106)
+
 
 class MetaExtractor(type):
 

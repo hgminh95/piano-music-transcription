@@ -97,11 +97,10 @@ class SignalExtractor(core.Extractor):
         notes_len = struct.unpack_from('>i', inp.read(4))[0]
         notes = struct.unpack_from('>' + 'i' * notes_len, inp.read(4 * notes_len))
 
-        piano_range = xrange(9, 96)
-        classes = [0] * 88
+        classes = [0] * len(core.piano_range)
         for note in notes:
-            if note in piano_range:
-                classes[note - 9] = 1
+            if note in core.piano_range:
+                classes[note - min(core.piano_range)] = 1
 
         return meta, features, classes
 
