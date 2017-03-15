@@ -58,9 +58,12 @@ class SignalExtractor(core.Extractor):
         self.o_env = librosa.onset.onset_strength(y, sr=sr)
         onset_frames = librosa.onset.onset_detect(
             onset_envelope=self.o_env, sr=sr,
-            pre_max=0.03 * sr // 512, post_max=0.00 * sr // 512 + 1,
-            pre_avg=0.10 * sr // 512, post_avg=0.10 * sr // 512 + 1,
-            delta=0.01, wait=0.02 * sr // 512)
+            pre_max=0.02 * sr // 512,                # 20ms
+            post_max=0.00 * sr // 512 + 1,           # 0ms
+            pre_avg=0.05 * sr // 512,                # 50ms
+            post_avg=0.00 * sr // 512 + 1,           # 0ms
+            delta=0.0005,
+            wait=0.005 * sr // 512)                  # 5ms
         onset_frames = onset_frames.reshape(-1, 1)
 
         onset_time = librosa.frames_to_time(onset_frames, sr=sr)
