@@ -25,8 +25,6 @@ class NeuralNetwork(core.Model):
             'dropout': 0.0,
             'activation': 'relu',
             'optimizer': 'sgd',
-            'mean': None,
-            'std': None,
             'threshold': 0.5,
             'epoch': 5,
         }
@@ -34,9 +32,6 @@ class NeuralNetwork(core.Model):
     def fit(self, X, y):
         if self.model is None:
             self._build_model(X.shape[1], y.shape[1])
-
-        if self.parameters['mean'] is not None and self.parameters['std'] is not None:
-            X = (X - self.parameters['mean']) / self.parameters['std']
 
         self.model.fit(X, y, nb_epoch=self.parameters['epoch'])
 
@@ -52,9 +47,6 @@ class NeuralNetwork(core.Model):
         self._save_metadata(output)
 
     def predict(self, X):
-        if self.parameters['mean'] is not None and self.parameters['std'] is not None:
-            X = (X - self.parameters['mean']) / self.parameters['std']
-
         y = self.model.predict(X)
 
         y[y > self.parameters['threshold']] = 1
