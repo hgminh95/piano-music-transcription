@@ -13,8 +13,18 @@ _logger = logging.getLogger(__name__)
 
 def getfeatures(D, o_env, frame, left=0, right=0):
     return np.append(
-        D[:, frame - left:frame + right + 1].ravel(),
-        o_env[frame - left: frame + right + 1])
+        np.lib.pad(
+            D[:, frame - left:frame + right + 1],
+            ((0, 0), (max(0, left - frame), max(0, - D.shape[1] + frame + right + 1))),
+            'constant',
+            constant_values=(0, 0)
+        ).ravel(),
+        np.lib.pad(
+            o_env[frame - left: frame + right + 1],
+            (max(0, left - frame), max(0, - o_env.shape[0] + frame + right + 1)),
+            'constant',
+            constant_values=(0, 0))
+    )
 
 
 class SignalExtractor(core.Extractor):
@@ -57,12 +67,15 @@ class SignalExtractor(core.Extractor):
         onset_time = onset_time.reshape(-1, 1)
         onset = np.hstack((onset_time, onset_frames))
 
-        features = map(lambda x: (
-            (x[0], x[1]),
-            self.features_at(int(x[1]))
-        ), onset)
+        features = map(lambda x: self.features_at(int(x[1])), onset)
+        features = np.array(features)
 
-        return features
+        mean = features.mean(axis=0)
+        std = features.std(axis=0)
+
+        features = (features - mean) / std
+
+        return zip(onset, features)
 
     def dump(self, out, data):
         meta, features, notes = data
